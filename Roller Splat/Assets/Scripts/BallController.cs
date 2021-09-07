@@ -5,99 +5,123 @@ using UnityEngine;
 public class BallController : MonoBehaviour
 {
     //Properties...
-    private Rigidbody ballRB;
-    public float speed = 5.0f;
-    public bool isTravelling;
-    private Vector3 travelDirection;
-    private Vector3 nextCollisionPosition;
+    private Rigidbody ballRB; //Rigid body component of the game object attached to...
+    private AudioSource ballAudioSource;
+    public AudioClip impactSound;
+    private float speed = 30.0f; //Movement speed of the game object attached to...
+    public bool isTravelling; //Is true or false if game object isTravelling...
+    private Vector3 travelDirection; //Travel direction of game object...
+    private Vector3 nextCollisionPosition; //Next collision position based on raycast...
 
     //Mouse Input Properties...
-    private float minSwipeDistance = 500.0f;
-    private Vector2 swipeDirection;
-    private Vector2 currentFrameSwipePos;
-    private Vector2 lastFrameSwipePos;
+    private Vector2 swipeDirection; //Direction of swipe...
+    private Vector2 currentFrameSwipePos; //Current touch/cursor position on screen...
+    private Vector2 lastFrameSwipePos; //Last touch/cursor position on screen...
+    private float minSwipeDistance = 5000.0f; //Minimum on screen distance between the current and last touch/cursor position...
 
     //Color Properties...
-    private Color solveColor;
+    private Color solveColor; //Ball and solved tiles color...
+
     // Start is called before the first frame update
     void Start()
     {
-        ballRB = GetComponent<Rigidbody>();
-        solveColor = Random.ColorHSV(0.6f, 1.0f);
-        GetComponent<MeshRenderer>().material.color = solveColor;
+        ballRB = GetComponent<Rigidbody>();//Get rigit bod component of game object attached to...
+        ballAudioSource = GetComponent<AudioSource>();
+        solveColor = Random.ColorHSV(0.5f, 1.0f);//Select a random color...
+        GetComponent<MeshRenderer>().material.color = solveColor;//Set the material color of game object to solveColor...
     }
 
     // Update is called once per frame
     void Update()
     {
+        //If level is solved(finished) is true don't execute further...
         if (GameManager.singleton.isFinished == true)
         {
             //ballRB.velocity = Vector3.zero;
             return;
         }
         Debug.Log("Controller");
+        //If game object is not travelling...
         if (isTravelling)
         {
-            ballRB.velocity = travelDirection * speed;
-            //nextCollisionPosition = Vector3.zero
+            ballRB.velocity = travelDirection * speed; //Add velocity to game object every frame...
         }
+        //Create an overlap sphere every frame with the following parameters...
         Collider[] hitColliders = Physics.OverlapSphere(transform.position - (Vector3.up / 2), 0.05f);
+        //Loop through the hitted colliders and get game object who possess the GroundPiece component...
         int i = 0;
         while (i < hitColliders.Length)
         {
             GroundPiece groundPiece = hitColliders[i].GetComponent<GroundPiece>();
-            if (groundPiece)
+            if (groundPiece)//If groundPiece is valid...
             {
-                if (!(groundPiece.isColored))
+                if (!(groundPiece.isColored))//If the instance of GroundPiece has isColored not set to true, call the ChangeColor function from GroundPiece.cs...
                 {
                     groundPiece.ChangeColor(solveColor);
                 }
             }
-            i++;
+            i++; //increment i...
         }
-        if (Vector3.Distance(nextCollisionPosition, transform.position) < 1)
+        //If the distance between the game object and the next collision position is less than the stated value then set the following properties...
+        if (Vector3.Distance(nextCollisionPosition, transform.position) < 1.0f)
         {
+            if(isTravelling)
+            {
+                //Play impact sound...
+                ballAudioSource.PlayOneShot(impactSound, 0.7f);
+            }
             isTravelling = false;
             nextCollisionPosition = Vector3.zero;
             travelDirection = Vector3.zero;
         }
+        //If game object is not travelling...
         if (!isTravelling)
         {
+            //Get mouse button down(Executed in a single frame)...
+            if(Input.GetMouseButtonDown(0))
+            {
+                lastFrameSwipePos = new Vector2(Input.mousePosition.x, Input.mousePosition.y); //Set to mouse/touch input location...
+            }
+            //Get mouse button(Executed every frame when intialized)...
             if (Input.GetMouseButton(0))
             {
-                currentFrameSwipePos = new Vector2(Input.mousePosition.x, Input.mousePosition.y);
-                if (currentFrameSwipePos != Vector2.zero)
+                currentFrameSwipePos = new Vector2(Input.mousePosition.x, Input.mousePosition.y);//Set to mouse/touch input location this frame...
+                if (currentFrameSwipePos != Vector2.zero)//Check if it is null..
                 {
                     //Debug.Log("Mouse position is not equal to zero");
-                    swipeDirection = currentFrameSwipePos - lastFrameSwipePos;
-                    if (swipeDirection.sqrMagnitude > minSwipeDistance)
+                    swipeDirection = currentFrameSwipePos - lastFrameSwipePos; //Get distance between the current and last mouse/touch input this frame...
+                    //Programmer Note :
+                    //If it was a click the difference would be zero -------->(Refer to GetMouseButtonDown())...
+                    //If it was a swipe there would be a defined difference...
+                    if (swipeDirection.sqrMagnitude > minSwipeDistance) //Check if the square magnitude of swipe direction would be greater than minimum swipe distance...
                     {
-                        //Debug.Log("Swipe direction is valid");
-
-                        swipeDirection.Normalize();
-                        if (swipeDirection.x > -0.5f && swipeDirection.x < 0.5f)
+                        //ballAudioSource.PlayOneShot(impactSound);
+                        swipeDirection.Normalize();//Normalize swipe direction(Result in a unit vector which specifies direction of the swipe)...
+                        if (swipeDirection.x > -0.5f && swipeDirection.x < 0.5f)//If the swipe has little influence in the x-axis...
                         {
                             //Debug.Log("Swipe up or down");
-                            CanTravel(swipeDirection.y > 0 ? Vector3.forward : Vector3.back);
+                            CanTravel(swipeDirection.y > 0 ? Vector3.forward : Vector3.back);//Move in the forward or back direction...
                         }
-                        if (swipeDirection.y > -0.5f && swipeDirection.y < 0.5f)
+                        if (swipeDirection.y > -0.5f && swipeDirection.y < 0.5f)//If the swipe has little influence in the y-axis...
                         {
                             //Debug.Log("Swipe left or right");
-                            CanTravel(swipeDirection.x > 0 ? Vector3.right : Vector3.left);
+                            CanTravel(swipeDirection.x > 0 ? Vector3.right : Vector3.left);//Move in the right or left direction...
                         }
-                        lastFrameSwipePos = currentFrameSwipePos;
+                        lastFrameSwipePos = currentFrameSwipePos;//Set last input position to current input position this frame....
                     }
                 }
-
             }
+            //Get mouse button up(Executed in a single frame)...
             if (Input.GetMouseButtonUp(0))
             {
+                //Set these parameters to null...
                 lastFrameSwipePos = Vector2.zero;
                 currentFrameSwipePos = Vector2.zero;
             }
         }
 
     }
+    //Function handling travel and direction...
     void CanTravel(Vector3 direction)
     {
         RaycastHit hit;

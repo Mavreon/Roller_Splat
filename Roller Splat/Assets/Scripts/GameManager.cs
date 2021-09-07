@@ -7,14 +7,16 @@ using UnityEngine.SceneManagement;
 public class GameManager : MonoBehaviour
 {
     //Properties...
-    private GroundPiece[] allGroundPieces;
+    private GroundPiece[] allGroundPieces;//Array containing all ground pieces present in a scene
     public static GameManager singleton;
     public bool isFinished;
     public Text youWinText;
+    public Image MainMenuUI;///
+    public Image GoBackUI;///
+
     private void Awake()
     {
-        //SceneManager.LoadScene(0);
-        allGroundPieces = FindObjectsOfType<GroundPiece>();
+        allGroundPieces = FindObjectsOfType<GroundPiece>();//Get and store all ground pieces present in the scene...
         if (!singleton)
         {
             singleton = this;
@@ -36,22 +38,29 @@ public class GameManager : MonoBehaviour
         
     }
 
+    //Load next scene when current scene has been solved...
     private void LoadNextScene()
     {
-        if(SceneManager.GetActiveScene().buildIndex == 0)
+        if (!isFinished)
+            return;
+        if (SceneManager.GetActiveScene().buildIndex < 2)
         {
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex + 1);
+            youWinText.gameObject.SetActive(false);
         }
-        else if (SceneManager.GetActiveScene().buildIndex == 1)
+        else if (SceneManager.GetActiveScene().buildIndex == 2)
         {
-            SceneManager.LoadScene(0);
+            //GoBackUI.gameObject.SetActive(true);
+            LoadGoBackUI(true);
+            youWinText.gameObject.SetActive(false);
         }
+
     }
+    //NB : Called in GroundPiece.cs...
     public void CheckComplete()
     {
-        //Debug.Log("Check complete function is being called");
-        //isFinished = true;
-        for(int i = 0; i < allGroundPieces.Length ; i++)
+        //Check if all ground pieces have been solved...
+        for (int i = 0; i < allGroundPieces.Length ; i++)
         {
             if(allGroundPieces[i].isColored == false)
             {
@@ -64,11 +73,30 @@ public class GameManager : MonoBehaviour
                 isFinished = true;
             }
         }
+        //If isFinished is true...
         if(isFinished)
         {
             Debug.Log("You Win!!!");
             youWinText.gameObject.SetActive(true);
-            LoadNextScene();
+            LoadNextScene(); //Call Load Next Scene function...
         }
+    }
+
+    public void LoadMainMenu(bool canLoad)///
+    {
+        MainMenuUI.gameObject.SetActive(canLoad);
+    }
+    public void LoadGoBackUI(bool canLoad)///
+    {
+        GoBackUI.gameObject.SetActive(canLoad);
+        if (!canLoad)
+        {
+            SceneManager.LoadScene(0);
+            //LoadMainMenu(true);
+        }
+    }
+    public void QuitGame()///
+    {
+        Application.Quit();
     }
 }
